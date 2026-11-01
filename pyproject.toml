@@ -8,6 +8,9 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.32.0",
+    "alembic>=1.20.1",
 ]
 
 [dependency-groups]
@@ -15,6 +18,7 @@ dev = [
     "pytest>=8.3",
     "httpx>=0.28",
     "ruff>=0.8",
+    "pytest-asyncio>=0.24",
 ]
 
 [build-system]
@@ -26,10 +30,21 @@ packages = ["app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+# One event loop for the whole session: the app's AsyncEngine is a process-wide
+# singleton (correct for a real server with one loop for its whole lifetime), so tests
+# must share that same single loop too — function-scoped loops would hand the engine's
+# connection pool a dead loop on the second test that touches it.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# B008: FastAPI's Depends(...)/Header(...) in a parameter default is the documented,
+# idiomatic pattern — not the mutable-default-argument bug this rule targets.
+ignore = ["B008"]
