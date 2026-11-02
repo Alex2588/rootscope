@@ -3,7 +3,7 @@ FROM python:3.12-slim AS base
 
 # Install uv by copying the official static binary rather than pip-installing it —
 # keeps uv itself out of the project's own dependency graph.
-COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:0.12 /uv /uvx /usr/local/bin/
 
 WORKDIR /app
 
