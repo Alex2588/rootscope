@@ -1,4 +1,4 @@
-"""PostgreSQL integration tests for POST /api/v1/incidents/{incident_id}/investigations."""
+"""PostgreSQL integration tests for the investigations endpoints."""
 
 import asyncio
 import uuid
@@ -63,6 +63,7 @@ async def test_create_investigation_returns_queued(
 
     assert response.status_code == 202
     body = response.json()
+    assert response.headers["location"] == f"/api/v1/investigations/{body['id']}"
     assert body["incident_id"] == incident_id
     assert body["strategy"] == strategy
     assert body["status"] == "queued"
@@ -90,6 +91,7 @@ async def test_replay_returns_same_investigation(client: AsyncClient, incident_i
 
     assert first.status_code == second.status_code == 202
     assert first.json() == second.json()
+    assert first.headers["location"] == second.headers["location"]
     assert len(await _rows_for_key(key)) == 1
 
 
@@ -183,6 +185,32 @@ async def test_missing_idempotency_key_returns_400(client: AsyncClient, incident
     response = await client.post(_url(incident_id), json={"strategy": "llm_only"})
 
     assert response.status_code == 400
+
+
+async def test_get_investigation_via_location_returns_created_investigation(
+    client: AsyncClient, incident_id: str
+) -> None:
+    created = await client.post(
+        _url(incident_id), json={"strategy": "telemetry_rag"}, headers={"Idempotency-Key": _key()}
+    )
+    assert created.status_code == 202
+
+    response = await client.get(created.headers["location"])
+
+    assert response.status_code == 200
+    assert response.json() == created.json()
+
+
+async def test_get_unknown_investigation_returns_404(client: AsyncClient) -> None:
+    response = await client.get(f"/api/v1/investigations/{uuid.uuid4()}")
+
+    assert response.status_code == 404
+
+
+async def test_get_investigation_with_malformed_id_returns_422(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/investigations/not-a-uuid")
+
+    assert response.status_code == 422
 
 
 async def test_concurrent_requests_same_key_resolve_to_one_row(
