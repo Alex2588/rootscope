@@ -1,12 +1,18 @@
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.idempotency import fingerprint
 from app.db.models.incident import Incident
-from app.db.repositories.incident import create_incident_idempotent
+from app.db.repositories.incident import create_incident_idempotent, get_incident_by_id
 from app.schemas.incident import IncidentCreate
 
 
 class IdempotencyConflictError(Exception):
+    pass
+
+
+class IncidentNotFoundError(Exception):
     pass
 
 
@@ -30,4 +36,12 @@ async def create_incident(
                 "Idempotency-Key was already used with a different request payload"
             )
 
+    return incident
+
+
+async def get_incident(session: AsyncSession, incident_id: uuid.UUID) -> Incident:
+    async with session.begin():
+        incident = await get_incident_by_id(session, incident_id)
+    if incident is None:
+        raise IncidentNotFoundError(f"Incident {incident_id} not found")
     return incident

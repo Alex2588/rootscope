@@ -1,4 +1,4 @@
-"""PostgreSQL integration tests for POST /api/v1/incidents."""
+"""PostgreSQL integration tests for the /api/v1/incidents endpoints."""
 
 import asyncio
 import uuid
@@ -161,6 +161,43 @@ async def test_incident_persists_after_response(client: AsyncClient) -> None:
 
     assert row is not None
     assert row.alert_title == "High latency on checkout"
+
+
+async def test_get_incident_returns_created_incident(client: AsyncClient) -> None:
+    created = await client.post(
+        "/api/v1/incidents",
+        json=_payload(alert_description="p99 > 2s", external_incident_id="PD-123"),
+        headers={"Idempotency-Key": _key()},
+    )
+    assert created.status_code == 201
+
+    response = await client.get(f"/api/v1/incidents/{created.json()['id']}")
+
+    assert response.status_code == 200
+    assert response.json() == created.json()
+
+
+async def test_get_incident_does_not_expose_internal_fields(client: AsyncClient) -> None:
+    created = await client.post(
+        "/api/v1/incidents", json=_payload(), headers={"Idempotency-Key": _key()}
+    )
+
+    body = (await client.get(f"/api/v1/incidents/{created.json()['id']}")).json()
+
+    assert "idempotency_key" not in body
+    assert "request_fingerprint" not in body
+
+
+async def test_get_unknown_incident_returns_404(client: AsyncClient) -> None:
+    response = await client.get(f"/api/v1/incidents/{uuid.uuid4()}")
+
+    assert response.status_code == 404
+
+
+async def test_get_incident_with_malformed_id_returns_422(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/incidents/not-a-uuid")
+
+    assert response.status_code == 422
 
 
 async def test_concurrent_requests_same_key_same_payload_resolve_to_one_row(
