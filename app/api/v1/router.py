@@ -6,9 +6,9 @@ included here as they're built — this stays the single place that knows what v
 
 from fastapi import APIRouter
 
-from app.api.v1 import incidents
+from app.api.v1 import incidents, investigations
 
 router = APIRouter()
 
 router.include_router(incidents.router)
-# router.include_router(investigations.router)  # added when investigations lands (G1)
+router.include_router(investigations.router)

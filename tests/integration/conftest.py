@@ -18,6 +18,7 @@ from alembic import command
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.models import incident as _incident  # noqa: F401 — registers metadata
+from app.db.models import investigation as _investigation  # noqa: F401 — registers metadata
 from app.db.session import get_engine
 
 _ALEMBIC_INI = Path(__file__).resolve().parent.parent.parent / "alembic.ini"
