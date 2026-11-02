@@ -77,12 +77,8 @@ async def test_duplicate_submission_returns_existing_incident(client: AsyncClien
     key = _key()
     payload = _payload()
 
-    first = await client.post(
-        "/api/v1/incidents", json=payload, headers={"Idempotency-Key": key}
-    )
-    second = await client.post(
-        "/api/v1/incidents", json=payload, headers={"Idempotency-Key": key}
-    )
+    first = await client.post("/api/v1/incidents", json=payload, headers={"Idempotency-Key": key})
+    second = await client.post("/api/v1/incidents", json=payload, headers={"Idempotency-Key": key})
 
     assert first.status_code == 201
     assert second.status_code == 201
