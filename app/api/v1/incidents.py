@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,5 +35,18 @@ async def create_incident(
         )
     except incident_service.IdempotencyConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    return IncidentRead.model_validate(incident)
+
+
+@router.get("/{incident_id}", response_model=IncidentRead)
+async def get_incident(
+    incident_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> IncidentRead:
+    try:
+        incident = await incident_service.get_incident(session=session, incident_id=incident_id)
+    except incident_service.IncidentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     return IncidentRead.model_validate(incident)
