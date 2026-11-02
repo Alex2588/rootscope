@@ -5,9 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.idempotency import fingerprint
 from app.db.models.investigation import Investigation
 from app.db.repositories.incident import get_incident_by_id
-from app.db.repositories.investigation import create_investigation_idempotent
+from app.db.repositories.investigation import (
+    create_investigation_idempotent,
+    get_investigation_by_id,
+)
 from app.schemas.investigation import InvestigationCreate
 from app.services.incident import IdempotencyConflictError, IncidentNotFoundError
+
+
+class InvestigationNotFoundError(Exception):
+    pass
 
 
 async def create_investigation(
@@ -35,4 +42,12 @@ async def create_investigation(
                 "Idempotency-Key was already used with a different request payload"
             )
 
+    return investigation
+
+
+async def get_investigation(session: AsyncSession, investigation_id: uuid.UUID) -> Investigation:
+    async with session.begin():
+        investigation = await get_investigation_by_id(session, investigation_id)
+    if investigation is None:
+        raise InvestigationNotFoundError(f"Investigation {investigation_id} not found")
     return investigation

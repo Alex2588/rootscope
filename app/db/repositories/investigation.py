@@ -7,6 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models.investigation import Investigation
 
 
+async def get_investigation_by_id(
+    session: AsyncSession, investigation_id: uuid.UUID
+) -> Investigation | None:
+    return await session.get(Investigation, investigation_id)
+
+
 async def create_investigation_idempotent(
     session: AsyncSession, *, incident_id: uuid.UUID, values: dict, idempotency_key: str
 ) -> tuple[Investigation, bool]:
