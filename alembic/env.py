@@ -11,6 +11,7 @@ from app.db.base import Base
 from app.db.models import (
     incident,  # noqa: F401 — imported for metadata registration
     investigation,  # noqa: F401 — imported for metadata registration
+    outbox_event,  # noqa: F401 — imported for metadata registration
 )
 
 # this is the Alembic Config object, which provides

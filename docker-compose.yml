@@ -38,6 +38,41 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    # The node name derives from the hostname; a stable one keeps the data volume usable.
+    hostname: rabbitmq
+    ports:
+      # Loopback only: the local users have intentionally weak credentials.
+      - "127.0.0.1:5672:5672" # AMQP
+      - "127.0.0.1:15672:15672" # management UI (admin/admin)
+    volumes:
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-rootscope.conf:ro
+      - ./infra/rabbitmq/definitions.local.json:/etc/rabbitmq/definitions.local.json:ro
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  relay:
+    build: .
+    # --no-sync: dependencies were installed at build time without the dev group.
+    command: ["uv", "run", "--no-sync", "python", "-m", "app.relay"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-rootscope}:${POSTGRES_PASSWORD:-rootscope}@db:5432/${POSTGRES_DB:-rootscope}
+      RABBITMQ_URL: amqp://rootscope:rootscope@rabbitmq:5672/
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   qdrant_data:
+  rabbitmq_data:

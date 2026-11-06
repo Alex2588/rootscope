@@ -1,0 +1,97 @@
+{
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "users": [
+    {
+      "name": "rootscope",
+      "password_hash": "OdT8fFL1cUV7gPu1WFOVwLOcR4kARvI9LXfQQlX+NhOv7Pm7",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": []
+    },
+    {
+      "name": "admin",
+      "password_hash": "vJHP5EluM6EfvJ3BuassHgunH2UQJXRZEi5DjtYBE61FdQzK",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    }
+  ],
+  "permissions": [
+    {
+      "user": "rootscope",
+      "vhost": "/",
+      "configure": "^$",
+      "write": "^rootscope\\.investigations$",
+      "read": "^investigations\\.execute$"
+    },
+    {
+      "user": "admin",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "rootscope.investigations",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "rootscope.investigations.dlx",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "investigations.execute",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-delivery-limit": 5,
+        "x-dead-letter-exchange": "rootscope.investigations.dlx"
+      }
+    },
+    {
+      "name": "investigations.execute.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "rootscope.investigations",
+      "vhost": "/",
+      "destination": "investigations.execute",
+      "destination_type": "queue",
+      "routing_key": "investigation.execution_requested",
+      "arguments": {}
+    },
+    {
+      "source": "rootscope.investigations.dlx",
+      "vhost": "/",
+      "destination": "investigations.execute.dlq",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    }
+  ]
+}

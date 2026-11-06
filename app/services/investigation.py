@@ -9,6 +9,8 @@ from app.db.repositories.investigation import (
     create_investigation_idempotent,
     get_investigation_by_id,
 )
+from app.db.repositories.outbox import add_outbox_event
+from app.messaging.contracts import InvestigationExecutionRequested
 from app.schemas.investigation import InvestigationCreate
 from app.services.incident import IdempotencyConflictError, IncidentNotFoundError
 
@@ -40,6 +42,17 @@ async def create_investigation(
         if not created and investigation.request_fingerprint != computed_fingerprint:
             raise IdempotencyConflictError(
                 "Idempotency-Key was already used with a different request payload"
+            )
+
+        if created:
+            event = InvestigationExecutionRequested(
+                investigation_id=investigation.id, expected_attempt=1
+            )
+            await add_outbox_event(
+                session,
+                aggregate_id=investigation.id,
+                event_type=event.EVENT_TYPE,
+                payload=event.model_dump(mode="json"),
             )
 
     return investigation
