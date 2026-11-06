@@ -7,3 +7,4 @@ import os
 os.environ.setdefault(
     "DATABASE_URL", "postgresql+asyncpg://rootscope:rootscope@localhost:5432/rootscope_test"
 )
+os.environ.setdefault("RABBITMQ_URL", "amqp://rootscope:rootscope@localhost:5672/rootscope_test")

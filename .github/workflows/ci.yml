@@ -40,10 +40,36 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      rabbitmq:
+        image: rabbitmq:4.1-management-alpine
+        # Definitions can't be mounted (service containers start before checkout), so the
+        # broker boots with a default admin and the definitions are imported below.
+        env:
+          RABBITMQ_DEFAULT_USER: admin
+          RABBITMQ_DEFAULT_PASS: admin
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_port_connectivity"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 20
     env:
       DATABASE_URL: postgresql+asyncpg://rootscope:rootscope@localhost:5432/rootscope_test
+      RABBITMQ_URL: amqp://rootscope:rootscope@localhost:5672/rootscope_test
+      RABBITMQ_MANAGEMENT_URL: http://localhost:15672
+      RABBITMQ_ADMIN_USER: admin
+      RABBITMQ_ADMIN_PASSWORD: admin
     steps:
       - uses: actions/checkout@v5
+      # Retrying the POST may import twice; definitions are declarative, so that converges.
+      - name: Import RabbitMQ definitions
+        run: >
+          curl --fail-with-body --retry 5 --retry-all-errors --retry-delay 2
+          -u admin:admin -H "content-type: application/json"
+          -X POST --data @infra/rabbitmq/definitions.local.json
+          "$RABBITMQ_MANAGEMENT_URL/api/definitions"
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true

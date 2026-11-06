@@ -24,6 +24,16 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://rootscope:rootscope@localhost:5432/rootscope",
         validation_alias="DATABASE_URL",
     )
+    # Unprefixed for the same reason as DATABASE_URL; credentials match docker-compose.
+    rabbitmq_url: str = Field(
+        default="amqp://rootscope:rootscope@localhost:5672/",
+        validation_alias="RABBITMQ_URL",
+    )
+
+    relay_batch_size: int = 10
+    relay_poll_interval_seconds: float = 1.0
+    relay_confirm_timeout_seconds: float = 10.0
+    relay_reconnect_max_delay_seconds: float = 30.0
 
 
 @lru_cache
